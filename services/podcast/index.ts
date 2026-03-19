@@ -8,8 +8,14 @@
             await prisma.$connect();
             console.log('[podcast] Connected To Database');
 
-            app.listen(PORT, () => {
+            const server = app.listen(PORT, () => {
                 console.log(`[podcast] Service Is Running On Port ${PORT}`);
+            });
+
+            server.on('error', async (error) => {
+                console.error('[podcast] Server error:', error);
+                await prisma.$disconnect();
+                process.exit(1);
             });
         } catch (error) {
             console.error('[podcast] Failed To Start Service', error);

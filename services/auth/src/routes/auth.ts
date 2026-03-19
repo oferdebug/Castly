@@ -28,6 +28,23 @@ import { generateAccessToken, generateRefreshToken, verifyAccessToken } from "..
 
 const router: Router = Router();
 
+const VALID_ROLES = ['listener', 'creator', 'admin'] as const;
+const VALID_TIERS = ['free', 'premium'] as const;
+
+function toUserRole(value: string): UserRole {
+  if (VALID_ROLES.includes(value as any)) {
+    return value as UserRole;
+  }
+  throw new Error(`Invalid user role: ${value}`);
+}
+
+function toSubscriptionTier(value: string): SubscriptionTier {
+  if (VALID_TIERS.includes(value as any)) {
+    return value as SubscriptionTier;
+  }
+  throw new Error(`Invalid subscription tier: ${value}`);
+}
+
 interface AuthRequest extends Request {
   userId?: string;
   email?: string;
@@ -76,9 +93,9 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
 
         const accessToken = generateAccessToken({
             userId: user.id,
-            role: user.role as UserRole,
+            role: toUserRole(user.role),
             email: user.email,
-            subscriptionTier: user.subscriptionTier as SubscriptionTier,
+            subscriptionTier: toSubscriptionTier(user.subscriptionTier),
         });
         const refreshToken = generateRefreshToken();
         
@@ -134,9 +151,9 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
 
         const accessToken = generateAccessToken({
             userId: user.id,
-            role: user.role as UserRole,
+            role: toUserRole(user.role),
             email: user.email,
-            subscriptionTier: user.subscriptionTier as SubscriptionTier,
+            subscriptionTier: toSubscriptionTier(user.subscriptionTier),
         });
 
 
@@ -194,9 +211,9 @@ router.post('/refresh', async (req: Request, res: Response): Promise<void> => {
 
         const newAccessToken = generateAccessToken({
             userId: storedToken.user.id,
-            role: storedToken.user.role as UserRole,
+            role: toUserRole(storedToken.user.role),
             email: storedToken.user.email,
-            subscriptionTier: storedToken.user.subscriptionTier as SubscriptionTier,
+            subscriptionTier: toSubscriptionTier(storedToken.user.subscriptionTier),
         });
 
         const newRefreshToken = generateRefreshToken();

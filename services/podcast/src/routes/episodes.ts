@@ -74,21 +74,35 @@ router.post('/podcasts/:id/episodes', authenticate, audioUpload.single('audio'),
         const ext = req.file?.originalname?.split('.').pop();
         const s3key = `audio/${req.params.id}/${episode.id}.${ext}`;
 
-        await s3.send(new PutObjectCommand({
-            Bucket: BUCKET_NAME,
-            Key: s3key,
-            Body: req.file?.buffer,
-            ContentType: req.file?.mimetype || 'application/octet-stream',
-        }));
+        try {
+            await s3.send(new PutObjectCommand({
+                Bucket: BUCKET_NAME,
+                Key: s3key,
+                Body: req.file?.buffer,
+                ContentType: req.file?.mimetype || 'application/octet-stream',
+            }));
 
-        const audioUrl = `${process.env.S3_PUBLIC_URL}/${s3key}`;
+            const audioUrl = `${process.env.S3_PUBLIC_URL}/${s3key}`;
 
-        const updatedEpisode = await prisma.episode.update({
-            where: { id: episode.id },
-            data: { audioUrl },
-        });
+            const updatedEpisode = await prisma.episode.update({
+                where: { id: episode.id },
+                data: { audioUrl },
+            });
 
-        res.status(201).json({ message: 'Episode uploaded successfully', episode: updatedEpisode });
+            res.status(201).json({ message: 'Episode uploaded successfully', episode: updatedEpisode });
+        } catch (uploadError) {
+            console.error('Error during S3 upload or update:', uploadError);
+
+            await prisma.episode.delete({ where: { id: episode.id } });
+
+            try {
+                await s3.send(new DeleteObjectCommand({ Bucket: BUCKET_NAME, Key: s3key }));
+            } catch (s3DeleteError) {
+                console.error('Error cleaning up S3 object:', s3DeleteError);
+            }
+
+            throw uploadError;
+        }
     } catch (error) {
         console.error('Error creating episode:', error);
         res.status(500).json({ error: 'Internal Server Error' });
@@ -121,7 +135,7 @@ router.get('/:id/episodes', async (req, res): Promise<void> => {
 router.get('/:id', async (req, res): Promise<void> => {
   try {
     const episode = await prisma.episode.findUnique({
-      where: { id: req.params.id },
+      where: { id: req.params.id, isPublished: true },
       include: { podcast: true },
     });
 
@@ -189,10 +203,14 @@ router.delete('/:id', authenticate, async (req: AuthRequest, res: Response): Pro
       return;
     }
 
-    const s3Key = episode.audioUrl.replace(`${process.env.S3_PUBLIC_URL}/`, '');
-    await s3.send(new DeleteObjectCommand({ Bucket: BUCKET_NAME, Key: s3Key }));
-
     await prisma.episode.delete({ where: { id: req.params.id as string } });
+
+    const s3Key = episode.audioUrl.replace(`${process.env.S3_PUBLIC_URL}/`, '');
+    try {
+      await s3.send(new DeleteObjectCommand({ Bucket: BUCKET_NAME, Key: s3Key }));
+    } catch (s3Error) {
+      console.error('[DELETE /episodes/:id] Failed to delete S3 object:', s3Error);
+    }
 
     res.status(204).send();
   } catch (err) {

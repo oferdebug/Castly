@@ -3,7 +3,8 @@
   "createdAt": 1773842909452,
   "version": "1.0",
   "startupCommands": [
-    "pnpm install; pnpm dev"
+    "pnpm install",
+    "pnpm dev"
   ],
   "templateId": "any"
 }
