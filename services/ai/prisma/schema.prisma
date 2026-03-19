@@ -1,0 +1,41 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Transcript {
+  id        String   @id @default(uuid()) @db.Uuid
+  episodeId String   @unique @map("episode_id") @db.Uuid
+  content   String
+  segments  Json
+  status    String   @default("pending") @db.VarChar(20)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  @@map("transcripts")
+}
+
+model Summary {
+  id           String   @id @default(uuid()) @db.Uuid
+  episodeId    String   @unique @map("episode_id") @db.Uuid
+  tldr         String
+  keyTakeaways Json     @map("key_takeaways")
+  chapters     Json
+  showNotes    String   @map("show_notes")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  @@map("summaries")
+}
+
+model Conversation {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  episodeId String   @map("episode_id") @db.Uuid
+  messages  Json
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  @@map("conversations")
+}
