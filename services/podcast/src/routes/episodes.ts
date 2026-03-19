@@ -16,7 +16,7 @@
  *
  * Endpoints (mounted at /api/v1/episodes):
  * - POST /podcasts/:id/episodes     Upload new episode with audio file
- * - GET  /:id/episodes             List episodes for a podcast
+ * - GET  /podcasts/:id/episodes     List episodes for a podcast
  * - GET  /:id                      Get single episode details
  * - PUT  /:id                      Update episode metadata
  * - DELETE /:id                    Delete episode and remove audio from S3
@@ -32,10 +32,29 @@ import { audioUpload } from '../utils/upload';
 
 const router: Router = Router();
 
+// Map MIME types to file extensions for S3 key construction
+const AUDIO_MIME_TO_EXT: Record<string, string> = {
+    'audio/mpeg': 'mp3',
+    'audio/mp3': 'mp3',
+    'audio/ogg': 'ogg',
+    'audio/wav': 'wav',
+    'audio/x-wav': 'wav',
+    'audio/aac': 'aac',
+    'audio/flac': 'flac',
+    'audio/x-flac': 'flac',
+    'audio/mp4': 'm4a',
+    'audio/x-m4a': 'm4a',
+};
+
 router.post('/podcasts/:id/episodes', authenticate, audioUpload.single('audio'), async (req, res) => {
     try {
-        const podcast = await prisma.podcast.findUnique({ where: { id: req.params.id as string } });
+        const s3PublicUrl = process.env.S3_PUBLIC_URL;
+        if (!s3PublicUrl) {
+            res.status(500).json({ error: 'Server misconfiguration: S3_PUBLIC_URL is not set' });
+            return;
+        }
 
+        const podcast = await prisma.podcast.findUnique({ where: { id: req.params.id as string } });
 
         if (!podcast) {
             res.status(404).json({ error: 'Podcast Not Found,Please Try Again' });
@@ -52,7 +71,6 @@ router.post('/podcasts/:id/episodes', authenticate, audioUpload.single('audio'),
             return;
         }
 
-
         const { title, description, episodeNumber } = req.body;
 
         if (!title) {
@@ -60,28 +78,46 @@ router.post('/podcasts/:id/episodes', authenticate, audioUpload.single('audio'),
             return;
         }
 
+        if (episodeNumber !== undefined && episodeNumber !== '') {
+            const parsed = parseInt(episodeNumber, 10);
+            if (isNaN(parsed)) {
+                res.status(400).json({ error: 'episodeNumber must be a valid integer' });
+                return;
+            }
+        }
+
+        const ext = AUDIO_MIME_TO_EXT[req.file.mimetype];
+        if (!ext) {
+            res.status(400).json({ error: 'Unsupported audio file type' });
+            return;
+        }
 
         const episode = await prisma.episode.create({
             data: {
                 podcastId: podcast.id,
                 title,
                 description,
-                episodeNumber: episodeNumber ? parseInt(episodeNumber) : undefined,
+                episodeNumber: episodeNumber !== undefined && episodeNumber !== '' ? parseInt(episodeNumber, 10) : undefined,
                 audioUrl: '',
             },
         });
 
-        const ext = req.file?.originalname?.split('.').pop();
         const s3key = `audio/${req.params.id}/${episode.id}.${ext}`;
 
-        await s3.send(new PutObjectCommand({
-            Bucket: BUCKET_NAME,
-            Key: s3key,
-            Body: req.file?.buffer,
-            ContentType: req.file?.mimetype || 'application/octet-stream',
-        }));
+        try {
+            await s3.send(new PutObjectCommand({
+                Bucket: BUCKET_NAME,
+                Key: s3key,
+                Body: req.file.buffer,
+                ContentType: req.file.mimetype,
+            }));
+        } catch (uploadError) {
+            // Roll back the episode record if the S3 upload fails
+            await prisma.episode.delete({ where: { id: episode.id } });
+            throw uploadError;
+        }
 
-        const audioUrl = `${process.env.S3_PUBLIC_URL}/${s3key}`;
+        const audioUrl = `${s3PublicUrl}/${s3key}`;
 
         const updatedEpisode = await prisma.episode.update({
             where: { id: episode.id },
@@ -95,7 +131,7 @@ router.post('/podcasts/:id/episodes', authenticate, audioUpload.single('audio'),
     }
 });
 
-router.get('/:id/episodes', async (req, res): Promise<void> => {
+router.get('/podcasts/:id/episodes', async (req, res): Promise<void> => {
   try {
     const podcast = await prisma.podcast.findUnique({ where: { id: req.params.id } });
 
@@ -116,8 +152,7 @@ router.get('/:id/episodes', async (req, res): Promise<void> => {
   }
 });
 
-
-// Single episode by id — must come after GET /:id/episodes so :id isn't consumed by list route
+// Single episode by id — must come after GET /podcasts/:id/episodes so :id isn't consumed by list route
 router.get('/:id', async (req, res): Promise<void> => {
   try {
     const episode = await prisma.episode.findUnique({
@@ -126,6 +161,11 @@ router.get('/:id', async (req, res): Promise<void> => {
     });
 
     if (!episode) {
+      res.status(404).json({ error: 'Episode not found' });
+      return;
+    }
+
+    if (!episode.isPublished) {
       res.status(404).json({ error: 'Episode not found' });
       return;
     }
@@ -189,8 +229,13 @@ router.delete('/:id', authenticate, async (req: AuthRequest, res: Response): Pro
       return;
     }
 
-    const s3Key = episode.audioUrl.replace(`${process.env.S3_PUBLIC_URL}/`, '');
-    await s3.send(new DeleteObjectCommand({ Bucket: BUCKET_NAME, Key: s3Key }));
+    const s3PublicUrl = process.env.S3_PUBLIC_URL;
+    if (s3PublicUrl && episode.audioUrl && episode.audioUrl.startsWith(`${s3PublicUrl}/`)) {
+      const s3Key = episode.audioUrl.replace(`${s3PublicUrl}/`, '');
+      await s3.send(new DeleteObjectCommand({ Bucket: BUCKET_NAME, Key: s3Key }));
+    } else if (episode.audioUrl) {
+      console.warn(`[DELETE /episodes/:id] Skipping S3 delete: audioUrl "${episode.audioUrl}" does not match S3_PUBLIC_URL`);
+    }
 
     await prisma.episode.delete({ where: { id: req.params.id as string } });
 

@@ -2,7 +2,7 @@ import express from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
 import podcastsRouter from './src/routes/podcasts';
-import episodedRouter from './src/routes/episodes';
+import episodesRouter from './src/routes/episodes';
 
 
 
@@ -18,7 +18,7 @@ app.use(express.json({ limit: '10mb' }));
 
 
 app.use('/api/v1/podcasts', podcastsRouter);
-app.use('/api/v1/episodes', episodedRouter);
+app.use('/api/v1/episodes', episodesRouter);
 
 app.get('/health', (req, res) => {
     res.json({ status: 'ok', service: 'podcast' });
