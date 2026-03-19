@@ -73,13 +73,19 @@ router.post('/podcasts/:id/episodes', authenticate, audioUpload.single('audio'),
 
         const ext = req.file?.originalname?.split('.').pop();
         const s3key = `audio/${req.params.id}/${episode.id}.${ext}`;
-
+      try {
         await s3.send(new PutObjectCommand({
             Bucket: BUCKET_NAME,
             Key: s3key,
             Body: req.file?.buffer,
             ContentType: req.file?.mimetype || 'application/octet-stream',
-        }));
+        }));          
+      } catch (error) {
+        console.error('[PUT] Audio FIle Uplod To S3 Failed,Deleting Episode From Database', error);
+        await prisma.episode.delete({ where: { id: episode.id } });
+        res.status(500).json({ error: 'Failed to upload audio file' });
+        return;
+      }
 
         const audioUrl = `${process.env.S3_PUBLIC_URL}/${s3key}`;
 
@@ -189,11 +195,15 @@ router.delete('/:id', authenticate, async (req: AuthRequest, res: Response): Pro
       return;
     }
 
-    const s3Key = episode.audioUrl.replace(`${process.env.S3_PUBLIC_URL}/`, '');
-    await s3.send(new DeleteObjectCommand({ Bucket: BUCKET_NAME, Key: s3Key }));
+    const s3PublicUrl = process.env.S3_PUBLIC_URL;
+    if (!s3PublicUrl || !episode.audioUrl?.startsWith(s3PublicUrl)) {
+      console.warn('Skipping S3 delete: invalid audioUrl', { episodeId: episode.id });
+    } else {
+      const s3Key = episode.audioUrl.slice(`${s3PublicUrl}/`.length);
+      await s3.send(new DeleteObjectCommand({ Bucket: BUCKET_NAME, Key: s3Key }));
+    }
 
     await prisma.episode.delete({ where: { id: req.params.id as string } });
-
     res.status(204).send();
   } catch (err) {
     console.error('[DELETE /episodes/:id]', err);
