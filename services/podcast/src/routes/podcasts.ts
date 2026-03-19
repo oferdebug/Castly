@@ -193,7 +193,6 @@ router.post('/:id/follow', authenticate, async (req: AuthRequest, res: Response)
   }
 });
 
-// GET /podcasts/library — פודקאסטים שהמשתמש עוקב אחריהם
 router.get('/library', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const follows = await prisma.podcastFollow.findMany({
