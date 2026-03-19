@@ -16,9 +16,7 @@
  */
 
 import app from './app';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from './lib/prisma';
 
 const PORT = process.env.PORT || 4001;
 

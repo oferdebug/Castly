@@ -1,0 +1,9 @@
+{
+  "projectId": "f7f9a3ae-6dd8-45de-bbf3-9fb0e98c74e2",
+  "createdAt": 1773842909452,
+  "version": "1.0",
+  "startupCommands": [
+    "pnpm install; pnpm dev"
+  ],
+  "templateId": "any"
+}
