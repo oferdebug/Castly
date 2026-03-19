@@ -21,12 +21,12 @@
  * 4. Client calls protected routes (`/me`, `/upgrade-to-creator`) with bearer token
  */
 import { NextFunction, Request, Response, Router } from "express";
-import { PrismaClient } from "@prisma/client";
+import type { SubscriptionTier, UserRole } from "@ai-podcast/shared";
+import { prisma } from "../lib/prisma";
 import { hashPassword, verifyPassword } from "../utils/password";
 import { generateAccessToken, generateRefreshToken, verifyAccessToken } from "../utils/jwt";
 
 const router: Router = Router();
-const prisma = new PrismaClient() as any;
 
 interface AuthRequest extends Request {
   userId?: string;
@@ -75,9 +75,10 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
         });
 
         const accessToken = generateAccessToken({
-            userId: user.id, role: user.role,
+            userId: user.id,
+            role: user.role as UserRole,
             email: user.email,
-            subscriptionTier: user.subscriptionTier
+            subscriptionTier: user.subscriptionTier as SubscriptionTier,
         });
         const refreshToken = generateRefreshToken();
         
@@ -133,9 +134,9 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
 
         const accessToken = generateAccessToken({
             userId: user.id,
-            role: user.role,
+            role: user.role as UserRole,
             email: user.email,
-            subscriptionTier: user.subscriptionTier
+            subscriptionTier: user.subscriptionTier as SubscriptionTier,
         });
 
 
@@ -193,9 +194,9 @@ router.post('/refresh', async (req: Request, res: Response): Promise<void> => {
 
         const newAccessToken = generateAccessToken({
             userId: storedToken.user.id,
-            role: storedToken.user.role,
+            role: storedToken.user.role as UserRole,
             email: storedToken.user.email,
-            subscriptionTier: storedToken.user.subscriptionTier
+            subscriptionTier: storedToken.user.subscriptionTier as SubscriptionTier,
         });
 
         const newRefreshToken = generateRefreshToken();
