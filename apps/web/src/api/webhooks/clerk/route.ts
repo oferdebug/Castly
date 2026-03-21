@@ -7,6 +7,7 @@ import { api } from "../../../../convex/_generated/api";
 const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
 export async function POST(request: Request) {
+    console.log("Clerk webhook received");
     const body = await request.text();
 
     if (!process.env.CLERK_WEBHOOK_SECRET) {
