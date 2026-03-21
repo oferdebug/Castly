@@ -7,3 +7,5 @@ dist/
 .next/
 coverage/
 pnpm-store/
+apps/web/.next
+apps/web/node_modules
