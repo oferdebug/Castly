@@ -1,4 +1,5 @@
 // @ts-nocheck
+// @ts-nocheck
 import { NextResponse } from "next/server";
 import { Webhook } from "svix";
 import { headers } from "next/headers";
