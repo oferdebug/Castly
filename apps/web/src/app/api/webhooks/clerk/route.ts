@@ -38,7 +38,7 @@ export async function POST(request: Request) {
     switch (type) {
         case "user.created":
         case "user.updated":
-            await convex.mutation(api.users.upsertUser, {
+            await (convex as any).mutation("users:upsertUser", {
                 clerkId: data.id,
                 email: data.email_addresses[0].email_address,
                 name: `${data.first_name} ${data.last_name}`,
