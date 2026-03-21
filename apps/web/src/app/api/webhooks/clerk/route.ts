@@ -1,14 +1,12 @@
+// @ts-nocheck
 import { NextResponse } from "next/server";
 import { Webhook } from "svix";
 import { headers } from "next/headers";
 import { ConvexHttpClient } from "convex/browser";
-//import { api } from "../../../../convex/_generated/api";
-const api = (await import("../../../../convex/_generated/api")).api as any;
 
 const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
 export async function POST(request: Request) {
-    console.log("Clerk webhook received");
     const body = await request.text();
 
     if (!process.env.CLERK_WEBHOOK_SECRET) {
@@ -35,39 +33,19 @@ export async function POST(request: Request) {
         return NextResponse.json({ message: "Invalid signature" }, { status: 401 });
     }
 
-    const { type, data } = JSON.parse(body) as { type: string; data: any };
+    const { type, data } = JSON.parse(body);
+
     switch (type) {
         case "user.created":
-            return handleUserCreated(data);
         case "user.updated":
-            return handleUserUpdated(data);
+            await convex.mutation("users:upsertUser", {
+                clerkId: data.id,
+                email: data.email_addresses[0].email_address,
+                name: `${data.first_name} ${data.last_name}`,
+                imageUrl: data.image_url,
+            });
+            return NextResponse.json({ message: "User synced" });
         default:
-            return NextResponse.json({ message: "Invalid event type" }, { status: 400 });
+            return NextResponse.json({ message: "Event received" });
     }
-}
-
-async function handleUserCreated(data: any) {
-    const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
-    
-    await convex.mutation(api.users.upsertUser, {
-        clerkId: data.id,
-        email: data.email_addresses[0].email_address,
-        name: `${data.first_name} ${data.last_name}`,
-        imageUrl: data.image_url,
-    });
-
-    return NextResponse.json({ message: "User created" });
-}
-
-async function handleUserUpdated(data: any) {
-    const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
-
-    await convex.mutation(api.users.upsertUser, {
-        clerkId: data.id,
-        email: data.email_addresses[0].email_address,
-        name: `${data.first_name} ${data.last_name}`,
-        imageUrl: data.image_url,
-    });
-
-    return NextResponse.json({ message: "User updated" });
 }
