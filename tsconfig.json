@@ -12,6 +12,6 @@
     "rootDir": ".",
     "noEmit": true
   },
-  "include": ["services/auth/src/middleware/**/*.ts"],
+  "include": ["packages/shared/src/**/*.ts"],
   "exclude": ["node_modules", "dist"]
 }
