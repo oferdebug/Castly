@@ -1,9 +1,8 @@
-// @ts-nocheck
-// @ts-nocheck
 import { NextResponse } from "next/server";
 import { Webhook } from "svix";
 import { headers } from "next/headers";
 import { ConvexHttpClient } from "convex/browser";
+import { api } from "../../../../../convex/_generated/api";
 
 const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
@@ -39,7 +38,7 @@ export async function POST(request: Request) {
     switch (type) {
         case "user.created":
         case "user.updated":
-            await convex.mutation("users:upsertUser", {
+            await convex.mutation(api.users.upsertUser, {
                 clerkId: data.id,
                 email: data.email_addresses[0].email_address,
                 name: `${data.first_name} ${data.last_name}`,
