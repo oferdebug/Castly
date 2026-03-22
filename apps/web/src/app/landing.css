@@ -757,3 +757,110 @@
 		display: none;
 	}
 }
+
+.onboarding {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: var(--bg);
+}
+
+.onboarding__left {
+  padding: 80px 60px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background: rgba(99,102,241,0.04);
+  border-right: 1px solid var(--border);
+}
+
+.onboarding__right {
+  padding: 80px 60px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 24px;
+}
+
+.onboarding__title {
+  font-family: var(--font-display);
+  font-size: clamp(40px, 5vw, 64px);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  margin-bottom: 20px;
+}
+
+.onboarding__subtitle {
+  font-size: 16px;
+  color: var(--text-muted);
+  line-height: 1.6;
+  font-weight: 300;
+}
+
+.onboarding__step {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.onboarding__desc {
+  font-size: 15px;
+  color: var(--text-muted);
+}
+
+.onboarding__roles {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.onboarding__role {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 24px 20px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.onboarding__role:hover {
+  border-color: var(--border-hover);
+  background: rgba(99,102,241,0.06);
+}
+
+.onboarding__role--active {
+  border-color: var(--indigo);
+  background: rgba(99,102,241,0.1);
+}
+
+.onboarding__role-icon { font-size: 24px; }
+
+.onboarding__role-name {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.onboarding__role-desc {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.onboarding__error {
+  font-size: 13px;
+  color: #ef4444;
+}
+
+@media (max-width: 768px) {
+  .onboarding { grid-template-columns: 1fr; }
+  .onboarding__left { display: none; }
+  .onboarding__right { padding: 40px 24px; }
+}

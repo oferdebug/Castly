@@ -1,5 +1,5 @@
-import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { mutation, query } from "./_generated/server";
 
 export const upsertUser = mutation({
   args: {
@@ -39,5 +39,25 @@ export const getCurrentUser = query({
       .query("users")
       .withIndex("by_clerk_id", (q) => q.eq("clerkId", args.clerkId))
       .unique();
+  },
+});
+
+export const setUserRole=mutation({
+  args:{
+    clerkId:v.string(),
+    role:v.union(v.literal('listener'),v.literal('creator')),
+  },
+  handler:async(ctx,args)=>{
+    const user=await ctx.db
+    .query('users')
+    .withIndex('by_clerk_id',(q)=>q.eq('clerkId',args.clerkId))
+    .unique();
+
+    if(!user) throw new Error('User Not Found');
+
+    return await ctx.db.patch(user._id,{
+      role:args.role,
+      onBoardingCompleted:true,
+    });
   },
 });

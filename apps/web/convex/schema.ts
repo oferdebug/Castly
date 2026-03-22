@@ -7,6 +7,8 @@ export default defineSchema({
     email: v.string(),
     name: v.optional(v.string()),
     imageUrl: v.optional(v.string()),
+    role:v.optional(v.union(v.literal('listener'),v.literal('creator'))),
+    onBoardingCompleted:v.optional(v.boolean()),
     createdAt: v.number(),
   }).index("by_clerk_id", ["clerkId"]),
 

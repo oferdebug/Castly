@@ -6,6 +6,7 @@ import Hero from '@/components/landing/Hero';
 import Pricing from '@/components/landing/Pricing';
 import Testimonials from './Testimonials';
 import Footer from './Footer';
+import OnboardingPage from './onboarding/page';
 export default function Page() {
 	return (
 		<>
